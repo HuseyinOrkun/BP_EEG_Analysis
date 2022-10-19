@@ -7,22 +7,23 @@ import pandas as pd
 from src import project_config as cfg
 
 
-def read_eeglab_preprocessed_file(subject_name, file_name):
-    from_raw_events_path = cfg.subject_eeg_folder / "raw_events.txt"
-    eeglab_preprocessed_set_file = file_name
+# Reads a preprocessed .set file, reads both raw events and
+# events after preprocessing, creates metadata and returns a mne.Epochs object
+def read_eeglab_preprocessed_file():
+    from_raw_events_path = cfg.raw_events_path
+    eeglab_preprocessed_set_file = cfg.subject_preprocessed_file_path
 
     # Read events from event txt file (eeglab output)
     all_events = pd.read_csv(from_raw_events_path, header=0, sep='\t',
                              dtype={'latency': int, 'channel': int,
-                                    'urevent': int},
-                             skiprows=[1],
+                                    'urevent': int}, skiprows=[1],
                              usecols=['latency', 'channel', 'type', 'urevent'],
                              converters={'type': lambda x: int(x[-2:])})
 
     from_raw_events_stimulus_rows = all_events.loc[
         all_events['type'].isin(list(cfg.event_code_to_stimulus_id.values()))]
 
-    from_rejected_epochs_events_path = cfg.subject_eeg_folder / "events_processed.txt"
+    from_rejected_epochs_events_path = cfg.processed_events_path
 
     # Read events from event txt file (eeglab output)
     post_rejection_events = pd.read_csv(from_rejected_epochs_events_path,
@@ -44,22 +45,14 @@ def read_eeglab_preprocessed_file(subject_name, file_name):
     all_events.reset_index(drop=True)
     all_events = all_events.to_numpy(dtype=int)
 
-    ########################################################################################################################
-    # Metadata
-    ########################################################################################################################
-    # %%
-
-    metadata_tmin, metadata_tmax = -2.2, 2.7
-
-    # auto-create metadata
-    # this also returns a new events array and an event_id dictionary. we'll see
-    # later why this is important
+    # Create Metadata
+    metadata_tmin, metadata_tmax = -2.6, 1.5
     metadata, events, event_id = mne.epochs.make_metadata(
         events=all_events, event_id=cfg.event_code_to_all_events_ids,
         row_events=list(cfg.event_code_to_stimulus_id.keys()),
         keep_first=['Stimulus', 'Response', 'Cue'],
         tmin=metadata_tmin, tmax=metadata_tmax,
-        sfreq=1000.)  # Later raw.info['sfreq']
+        sfreq=500.)  # Later raw.info['sfreq']
     metadata.reset_index(drop=True, inplace=True)
 
     metadata = metadata[

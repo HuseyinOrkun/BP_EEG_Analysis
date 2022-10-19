@@ -3,12 +3,11 @@ from pathlib import Path
 
 # this is a pointer to the module object instance itself.
 this = sys.modules[__name__]
-this.raw_data_path = Path(
-    '/Users/huseyinelmas/CCNLAB/BP_EEG_Analysis/data')
-this.output_path = Path(
-    '/Users/huseyinelmas/CCNLAB/BP_EEG_Analysis/results')
-this.exec_log_path = Path(
-    '/Users/huseyinelmas/CCNLAB/BP_EEG_Analysis/logs')
+this.project_path = Path().absolute()
+this.raw_data_path = this.project_path / 'data'
+this.output_path = this.project_path / 'results'
+this.exec_log_path = this.project_path / 'logs'
+this.current_subject = None
 
 # Constants
 this.event_code_to_stimulus_id = {
@@ -59,33 +58,22 @@ this.event_code_to_all_events_ids.update({
 
 this.id_to_event_code = {v: k for k, v in
                          this.event_code_to_all_events_ids.items()}
-this.condition_color_dict = \
-    {1: 'red',
-     2: 'lightcoral',
-     3: 'rosybrown',
-     4: 'blue',
-     5: 'lightblue',
-     6: 'lightsteelblue',
-     7: 'springgreen',
-     8: 'palegreen',
-     9: 'darkseagreen',
-     -1: 'black'
-     }
-
 this.current_subject = None
 
 
 def init_config(name):
     if this.current_subject is None:
         this.current_subject = name
-
         this.subject_path = this.raw_data_path / this.current_subject
-        this.subject_eeg_folder = this.raw_data_path / this.current_subject \
-                                  / 'eeg'
-        this.subject_behavior_folder = this.raw_data_path / \
-                                       this.current_subject / 'behavior'
+        this.subject_eeg_folder = \
+            this.raw_data_path / 'eeg'
+        this.subject_behavior_folder = this.raw_data_path / 'behavior'
         this.subject_output_folder = this.output_path / this.current_subject
-        this.subject_processed_file_path = this.subject_eeg_folder / 'processed'
+        this.subject_processed_file_path = \
+            this.subject_eeg_folder / 'processed'
         this.subject_preprocessed_file_path = \
             this.subject_eeg_folder / 'processed' / \
             f"{this.current_subject}_preprocessed.set"
+        this.raw_events_path = this.subject_eeg_folder / "raw_events.txt"
+        this.processed_events_path = \
+            this.subject_eeg_folder / "processed_events.txt"

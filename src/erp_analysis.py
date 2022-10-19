@@ -4,12 +4,13 @@ import autoreject
 import matplotlib
 import mne
 
-matplotlib.use('qtAgg')
 from src import project_config as cfg
 
+matplotlib.use('qtAgg')
 
-def autoreject_analysis(epochs, subject_name):
-    cfg.init_config(subject_name)
+
+# Given epochs object, run autoreject and return the autorejected epochs object
+def autoreject_analysis(epochs):
     ar = autoreject.AutoReject(n_interpolate=[1, 2, 3, 4], random_state=11,
                                n_jobs=4, verbose=True)
     ar.fit(epochs)
@@ -27,6 +28,7 @@ def autoreject_analysis(epochs, subject_name):
     return epochs_ar
 
 
+# For a given subject, create a report of the analysis results ERPs and save it
 def create_report_for_subject(epochs):
     # Baseline Correction
     epochs.apply_baseline(baseline=(-2.4, -2.2))
@@ -49,8 +51,7 @@ def create_report_for_subject(epochs):
 
     # Add to report
     report.add_evokeds(evokeds=evoked_all,
-                       titles=[
-                           f'Evoked from {cfg.current_subject} (Autorejected)'],
+                       titles=[f'Evoked from {cfg.current_subject}'],
                        n_jobs=3)
     report.add_figure(topo_fig, title="topo", section="Evoked Topo Map")
 
@@ -58,30 +59,23 @@ def create_report_for_subject(epochs):
     epochs.equalize_event_counts()
 
     # Topoplot for congruent Incongruent and neutral
-    conditions = ['Congruent', 'Incongruent', 'Neutral']
     evokeds = dict(Congruent=list(epochs['Congruent'].iter_evoked()),
                    Incongruent=list(epochs['Incongruent'].iter_evoked()),
                    Neutral=list(epochs['Neutral'].iter_evoked()))
-
-    cin_fig = mne.viz.plot_compare_evokeds(evokeds, axes="topo", ci=True)
 
     channels = ["Oz", "POz", "Pz", "Cz", "Fz", "FCz"]
     for channel in channels:
         fig = mne.viz.plot_compare_evokeds(evokeds, picks=channel, ci=True,
                                            show=False)
-        report.add_figure(fig,
-                          title=f"Congruent Invongruent Neutral Comparison at channel {channel}",
-                          section="Congruent Invongruent Neutral Comparison")
+        title = f"Congruent Invongruent Neutral Comparison at channel " \
+                f"{channel}"
+        report.add_figure(fig, title=title,
+                          section="Congruent Incongruent Neutral Comparison")
 
     # Contra-ipsi ERP analysis
     query = "Congruency == '{}' and Target_location == '{}'"
-    all_evokeds = {f"{c}/{t}": epochs[query.format(c, t)].average()
-                   for t in epochs.metadata.Target_location.unique()
-                   for c in epochs.metadata.Congruency.unique()}
-
     congruent_evokeds = {f"{t}": epochs[query.format('Congruent', t)].average()
                          for t in epochs.metadata.Target_location.unique()}
-
     neutral_evokeds = {f"{t}": epochs[query.format('Neutral', t)].average()
                        for t in epochs.metadata.Target_location.unique()}
 
@@ -110,7 +104,9 @@ def create_report_for_subject(epochs):
     left_channels = mne.pick_channels_regexp(epochs.info['ch_names'],
                                              '.*[13579]$')
 
-    # Print contra ipsi waves for given channels
+    # Plot comparison of left and right for different conditions
+    # and contra - ipsi waves for given channels
+    # TODO: do this for all left and right channels
     conta_ipsi_channels = ["PO7", "PO8"]
     for channel in conta_ipsi_channels:
         titles = [f'Evoked response to Incongruent trials in {channel}',
